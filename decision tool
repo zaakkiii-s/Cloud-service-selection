@@ -1,0 +1,154 @@
+import numpy as np
+import skfuzzy as fuzz
+from skfuzzy import control as ctrl
+import sys
+from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QPushButton, QLineEdit
+
+# Define cloud service model
+def cloud_service_model(input_parameters, service_type):
+    service_type = input("Enter the cloud service type (IaaS, PaaS, SaaS): ")
+    performance_val = 5
+
+    # Adjust performance based on the type of cloud service
+    if service_type == 'IaaS':
+        performance_val += 10
+    elif service_type == 'PaaS':
+        performance_val += 5
+    elif service_type == 'SaaS':
+        performance_val += 2
+
+    return performance_val  # The performance value to be maximized
+
+# Define cloud management model
+def cloud_management_model(input_parameters, service_type):
+    objective_val = 0
+
+    # Adjust objective value based on the type of cloud service
+    if service_type == 'IaaS':
+        objective_val += 20
+    elif service_type == 'PaaS':
+        objective_val += 10
+    elif service_type == 'SaaS':
+        objective_val += 5
+
+    return objective_val  # The value to be maximized or minimized
+
+# Create Antecedents and Consequents for fuzzy logic
+input_parameter = ctrl.Antecedent(np.arange(0, 101, 1), 'input_parameter')
+performance = ctrl.Consequent(np.arange(0, 101, 1), 'performance')
+cost = ctrl.Consequent(np.arange(0, 101, 1), 'cost')
+security = ctrl.Consequent(np.arange(0, 101, 1), 'security')
+
+input_parameter['low'] = fuzz.trimf(input_parameter.universe, [0, 0, 50])
+input_parameter['medium'] = fuzz.trimf(input_parameter.universe, [0, 50, 100])
+input_parameter['high'] = fuzz.trimf(input_parameter.universe, [50, 100, 100])
+
+performance['low'] = fuzz.trimf(performance.universe, [0, 0, 50])
+performance['medium'] = fuzz.trimf(performance.universe, [0, 50, 100])
+performance['high'] = fuzz.trimf(performance.universe, [50, 100, 100])
+
+cost['low'] = fuzz.trimf(cost.universe, [0, 0, 50])
+cost['medium'] = fuzz.trimf(cost.universe, [0, 50, 100])
+cost['high'] = fuzz.trimf(cost.universe, [50, 100, 100])
+
+security['low'] = fuzz.trimf(security.universe, [0, 0, 50])
+security['medium'] = fuzz.trimf(security.universe, [0, 50, 100])
+security['high'] = fuzz.trimf(security.universe, [50, 100, 100])
+
+# Define fuzzy rules for cloud service model
+r1 = ctrl.Rule(input_parameter['low'], performance['low'])
+r2 = ctrl.Rule(input_parameter['medium'], performance['medium'])
+r3 = ctrl.Rule(input_parameter['high'], performance['high'])
+
+# Define fuzzy rules for cost
+r4 = ctrl.Rule(input_parameter['low'], cost['low'])
+r5 = ctrl.Rule(input_parameter['medium'], cost['medium'])
+r6 = ctrl.Rule(input_parameter['high'], cost['high'])
+
+# Define fuzzy rules for security
+r7 = ctrl.Rule(input_parameter['low'], security['low'])
+r8 = ctrl.Rule(input_parameter['medium'], security['medium'])
+r9 = ctrl.Rule(input_parameter['high'], security['high'])
+
+# Create control systems
+cloud_service_system = ctrl.ControlSystem([r1, r2, r3])
+cloud_management_system = ctrl.ControlSystem([r4, r5, r6, r7, r8, r9])
+
+# GUI
+class CloudManagementApp(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        layout = QVBoxLayout()
+        self.setWindowTitle('CLOUD MANAGEMENT SYSTEM')
+        
+        self.input_description_label = QLabel('Input Value (0-100): Represents system load. Choose a value based on:')
+        self.input_guidance_label = QLabel('0-30: Low load (idle or minimal usage)\n31-70: Medium load (moderate usage)\n71-100: High load (heavy usage)')
+        self.input_label = QLabel('Input:')
+        self.input_field = QLineEdit(self)
+        
+        self.service_description_label = QLabel('Cloud Service Types:\nIaaS: Infrastructure as a Service - Provides virtualized computing resources over the internet. Benefits: Flexibility, Scalability, Cost savings.\nPaaS: Platform as a Service - Provides a platform allowing customers to develop, run, and manage applications. Benefits: Simplified development, Cost-effective, Scalability.\nSaaS: Software as a Service - Delivers software applications over the internet. Benefits: Accessibility, Automatic updates, Scalability.')
+        self.service_label = QLabel('Service Type (IaaS, PaaS, SaaS):')
+        self.service_field = QLineEdit(self)
+        
+        self.calculate_button = QPushButton('Calculate')
+        self.calculate_button.clicked.connect(self.calculate)
+
+        self.result_label = QLabel('Optimized Results:')
+        self.result_text = QLabel(self)
+
+        layout.addWidget(self.input_description_label)
+        layout.addWidget(self.input_guidance_label)
+        layout.addWidget(self.input_label)
+        layout.addWidget(self.input_field)
+        layout.addWidget(self.service_description_label)
+        layout.addWidget(self.service_label)
+        layout.addWidget(self.service_field)
+        layout.addWidget(self.calculate_button)
+        layout.addWidget(self.result_label)
+        layout.addWidget(self.result_text)
+
+        self.setLayout(layout)
+
+    def calculate(self):
+        input_val = float(self.input_field.text())
+        service_type = self.service_field.text()
+        
+        if service_type not in ["IaaS", "PaaS", "SaaS"]:
+            self.result_text.setText("Invalid service type. Please enter 'IaaS', 'PaaS', or 'SaaS'.")
+        else:
+            # Simulate the systems
+            simulate_service = ctrl.ControlSystemSimulation(cloud_service_system)
+            simulate_service.input['input_parameter'] = input_val
+            simulate_service.compute()
+
+            simulate_management = ctrl.ControlSystemSimulation(cloud_management_system)
+            simulate_management.input['input_parameter'] = input_val
+            simulate_management.compute()
+
+            optimized_performance = simulate_service.output['performance']
+            optimized_cost = simulate_management.output['cost']
+            optimized_security = simulate_management.output['security']
+
+            # Calculating the life cycle cost components (numbers below are just placeholders)
+            init_sys_cost = 50000  
+            monthly_cost = 1000  
+            security_management_cost = 5000  
+
+            # Formula to calculate the total life cycle cost
+            LCC = init_sys_cost + (monthly_cost * 12) + security_management_cost + optimized_cost
+
+            res_text = f"Optimized Performance: {optimized_performance:.2f}\n"
+            res_text += f"Optimized Cost: {optimized_cost:.2f}\n"
+            res_text += f"Optimized Security: {optimized_security:.2f}\n"
+            res_text += f"Life Cycle Cost (LCC): {LCC:.2f}\n"
+
+            self.result_text.setText(res_text)
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    ex = CloudManagementApp()
+    ex.show()
+    sys.exit(app.exec_())
